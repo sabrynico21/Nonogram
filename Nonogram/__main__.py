@@ -1,7 +1,7 @@
 import csv
-from .entities_ import Nonogram
+from .entities import Nonogram
 import numpy as np
-from.utils_ import tabu_search
+from.utils import tabu_search
 if __name__ == "__main__":
     file_path = "C:/Users/sabry/OneDrive/Desktop/picross_10.csv"
     with open(file_path, 'r') as file:
