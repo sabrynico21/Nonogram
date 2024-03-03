@@ -18,8 +18,8 @@ def calculate_exceeding_groups(solution):
     for i in range(solution.num_cols):
         len_actual = len(solution.actual_col_counts[i])
         len_expected = len(solution.col_counts[i])
-        if len_actual != len_expected:
-            exceeding_penalty += abs(len_expected - len_actual)
+        #if len_actual != len_expected:
+        exceeding_penalty += abs(len_expected - len_actual)
 
     return exceeding_penalty
 
@@ -28,17 +28,22 @@ def calculate_exceeding_len(solution):
     for i in range(solution.num_cols):
         expected_col_sum = sum (count for count in solution.col_counts[i])
         actual_col_sum = solution.get_value_cells(i,"col").count(1)
-        if actual_col_sum != expected_col_sum:
-            exceeding_penalty += abs(actual_col_sum - expected_col_sum)
+        #if actual_col_sum != expected_col_sum:
+        exceeding_penalty += abs(actual_col_sum - expected_col_sum)
     return exceeding_penalty
 
 def calculate_completeness(solution):
     [solution.modify_group_mask(index, "col") for index in range(solution.num_cols)]
-    [solution.modify_correct_col_groups_pct(index) for index in range(solution.num_cols)]
-    completeness = sum(normalize_array(solution.get_correct_col_groups_pct())) / solution.num_cols
-    return 1 - completeness
+    [solution.modify_correct_col_groups(index) for index in range(solution.num_cols)]
+    #completeness = solution.get_correct_col_groups_pct().count(1.0) / solution.num_cols
+    violated = [sum(elements) for elements in solution.get_correct_col_groups()]
+    #print(violated)
+    #completeness = sum(normalize_array(solution.get_correct_col_groups_pct())) / solution.num_cols
+    #return 1 - completeness
+    return sum(violated)
 
-def objective_function(solution, completeness_weight=0.40, groups_penalty_weight=0.30, len_penalty_weight= 0.30):
+def objective_function(solution, completeness_weight=0.20, groups_penalty_weight=0.4, len_penalty_weight= 0.4):
+
     completeness = calculate_completeness(solution)
     exceeding_groups = calculate_exceeding_groups(solution)
     exceeding_len = calculate_exceeding_len(solution)
@@ -69,6 +74,7 @@ def get_admissible_range(cache, solution, group_indices, group_list, group_value
     last_pred_index = np.where(group_list == (group_value - 1))[0]
     first_next_index = np.where(group_list == (group_value + 1))[0]
     prob = random.choice(np.arange(math.ceil(solution.num_cols / 2)))
+    
     if prob == 0 :
         max_value = solution.num_cols - last_group_index - 1   
         if len(first_next_index) != 0: 
@@ -121,37 +127,41 @@ def neighb(cache, solution, indices, count, descrease_count):
             offset_values = get_admissible_range(cache, solution.__copy__(), group_indices, group_list, group_value, row_index, count, descrease_count)
             if len(offset_values) == 0:
                 continue
-            neig = solution.__copy__()
-            #for offset in offset_values:
-            offset =random.choice(offset_values)
-            for group_index in group_indices:
-                neig.set_value(row_index, group_index, 0)
-
-            new_group_indices = group_indices + offset
-            for group_index in new_group_indices:
-                neig.set_value(row_index, group_index, 1)
             
-            for row in range(neig.num_rows):
-                neig.modify_group_mask(row, "row")
-            for col in range(neig.num_cols):
-                neig.modify_group_mask(col, "col")
-                neig.modify_correct_col_groups_pct(col)
+            for offset in offset_values:
+                neig = solution.__copy__()
+            #offset =random.choice(offset_values)
+                for group_index in group_indices:
+                    neig.set_value(row_index, group_index, 0)
 
-            neighbors.append([neig, objective_function(neig)])
-            cache.add((row_index,neig.game_table[row_index]))
+                new_group_indices = group_indices + offset
+                for group_index in new_group_indices:
+                    neig.set_value(row_index, group_index, 1)
+                
+                for row in range(neig.num_rows):
+                    neig.modify_group_mask(row, "row")
+                for col in range(neig.num_cols):
+                    neig.modify_group_mask(col, "col")
+                    neig.modify_correct_col_groups(col)
+
+                neighbors.append([neig, objective_function(neig)])
+                cache.add((row_index,neig.game_table[row_index]))
     return neighbors
 
 def tabu_search(solution):
-    solution.initialize_cells_values() 
-    print(print(objective_function(solution)))
+    solution.initialize_cells_values()
+    current_min = objective_function(solution)
+    #print(current_min)
     indices = np.array(solution.get_correct_row_groups())
     indices = np.where(indices != 2)[0] # ectract the index of rows in wich the groups don't are located correctly
     count = 0
-    current_min = objective_function(solution)
     descrease_count = 0
     cache = Memory(solution.correct_row_groups.count(1) * 3)
-    while (objective_function(solution) != 0 and count < 3000):
+    #cache = Memory(60)
+    while (current_min != 0 and count < 1000):
         count+= 1
+        #if current_min < 1:
+        #    cache.clear_memory()
         neighbors = neighb(cache, solution.__copy__(), indices, count, descrease_count)
         if (len(neighbors)== 0):
             cache.clear_memory()
@@ -159,22 +169,25 @@ def tabu_search(solution):
         objective_function_values = [element[1] for element in neighbors]
         min_value = min(objective_function_values)
         min_index = objective_function_values.index(min_value)
-        if (min_value < current_min or (count - descrease_count) > 1):
-            solution = neighbors[min_index][0]
-            current_min = min_value
-            print(" current min value ", current_min)
-            descrease_count = count
-    print(" last iteration: ", count)
-    print("\n")
-    print(" Solution table:")
-    print(solution.game_table)
-    print("\n")
-    print(" Solution col counts: ")
-    print(solution.get_actual_col_counts())
-    print("\n")
-    print(" Percent of correct column group: ")
-    print(solution.get_correct_col_groups_pct())
-    print("\n")
-    print(" Objective function: ")
-    print(objective_function(solution))
+        #if (min_value < current_min or (count - descrease_count) > 1):
+        solution = neighbors[min_index][0]
+        current_min = min_value
+        #print(" current min value ", current_min)
+            #descrease_count = count
+        #print(count)
+    # print(" last iteration: ", count)
+    # print("\n")
+    # print(" Solution table:")
+    # print(solution.game_table)
+    # print("\n")
+    # print(" Objective function: ")
+    # print(objective_function(solution))
+    # print("\n")
+    # print(" Solution col counts: ")
+    # print(solution.get_actual_col_counts())
+    # print("\n")
+    # print(" Percent of correct column group: ")
+    # print(solution.get_correct_col_groups_pct())
+
+    return current_min
     

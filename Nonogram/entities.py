@@ -3,7 +3,7 @@ import random
 import math
 random.seed(42)
 class Nonogram:
-    def __init__(self, rows=10, cols=10, row_counts=None, col_counts=None, actual_row_counts=None ,actual_col_counts=None, correct_row_groups=None, correct_col_groups_pct= None):
+    def __init__(self, rows=10, cols=10, row_counts=None, col_counts=None, actual_row_counts=None ,actual_col_counts=None, correct_row_groups=None, correct_col_groups= None):
         self.num_rows = rows
         self.num_cols = cols
         self.game_table = np.zeros((self.num_rows, self.num_cols), dtype=int)
@@ -17,10 +17,10 @@ class Nonogram:
         self.actual_col_counts = ([0] * cols if actual_col_counts == None else actual_col_counts)
 
         self.correct_row_groups = ([0] * rows if correct_row_groups == None else correct_row_groups) #can assume tre values: 0 - the groups don't match, 1 - the groups match but can be translated, 2 - the groups match and are positioned correctly
-        self.correct_col_groups_pct = ([0] * cols if correct_col_groups_pct == None else correct_col_groups_pct)
+        self.correct_col_groups = ([0] * cols if correct_col_groups == None else correct_col_groups) 
 
     def __copy__(self):
-        copy = Nonogram(self.num_rows, self.num_cols, self.row_counts, self.col_counts, self.actual_row_counts,self.actual_col_counts,None, self.correct_col_groups_pct)
+        copy = Nonogram(self.num_rows, self.num_cols, self.row_counts, self.col_counts, self.actual_row_counts,self.actual_col_counts,None, self.correct_col_groups)
         for row in range(copy.num_rows):
             for col in range(copy.num_cols):
                 copy.group_mask_row[row][col] = self.group_mask_row[row][col]
@@ -69,46 +69,75 @@ class Nonogram:
         else:
             self.correct_row_groups[index] = 0
 
-    def modify_correct_col_groups_pct(self, index):
-        percentage = 0
-        #self.modify_group_mask(index,"col")  
+    # def modify_correct_col_groups_pct(self, index): #contare quante violazioni ci sono nei gruppi
+    #     percentage = []
+    #     #self.modify_group_mask(index,"col")  
+    #     actual_len = len(self.actual_col_counts[index])
+    #     expected_len = len(self.col_counts[index])
+
+    #     if ( self.col_counts[index] == [0]):
+    #         if (self.actual_col_counts[index] == [0]):
+    #             self.correct_col_groups_pct[index] = 1.0
+    #         else:
+    #             self.correct_col_groups_pct[index] = 0.0
+    #         return
+
+    #     if (actual_len == expected_len): 
+    #         for group in range (actual_len):      
+    #             percentage.append(self.actual_col_counts[index][group] / self.col_counts[index][group])
+    #         if sum(percentage) == float(actual_len):
+    #             if percentage.count(1.0) != actual_len:
+    #                 self.correct_col_groups_pct[index] = 0
+    #                 return
+    #         self.correct_col_groups_pct[index] = sum(percentage) / actual_len 
+    #     else:
+    #         self.correct_col_groups_pct[index] = 0
+            # difference = actual_len - expected_len
+            # mean_percentage = 0
+            # if difference > 0: 
+            #     for d in range(0, difference):
+            #         percentage = 0
+            #         for group in range (expected_len):
+            #             percentage += self.actual_col_counts[index][group + d] / self.col_counts[index][group]
+            #         mean_percentage += percentage / expected_len
+            #     self.correct_col_groups_pct[index] = mean_percentage / (difference + 1 )
+            # else:
+            #     difference = - difference 
+            #     for d in range(0, difference):
+            #         percentage = 0
+            #         for group in range (actual_len):
+            #             percentage += self.actual_col_counts[index][group] / self.col_counts[index][group + d]
+            #         mean_percentage += (percentage / actual_len if actual_len !=0 else 0)
+            #     self.correct_col_groups_pct[index] = mean_percentage / (difference + 1 )
+    
+    def modify_correct_col_groups(self, index): #contare quante violazioni ci sono nei gruppi
+        percentage = [] 
         actual_len = len(self.actual_col_counts[index])
         expected_len = len(self.col_counts[index])
 
-        if (actual_len == expected_len): 
-            for group in range (actual_len):      
-                percentage += self.actual_col_counts[index][group] / self.col_counts[index][group]
-            self.correct_col_groups_pct[index] = (percentage / actual_len if actual_len !=0 else 0)
-        else:
-            difference = actual_len - expected_len
-            mean_percentage = 0
-            if difference > 0: 
-                for d in range(0, difference):
-                    percentage = 0
-                    for group in range (expected_len):
-                        percentage += self.actual_col_counts[index][group + d] / self.col_counts[index][group]
-                    mean_percentage += percentage / expected_len
-                self.correct_col_groups_pct[index] = mean_percentage / (difference + 1 )
+        if ( self.col_counts[index] == [0]):
+            if (self.actual_col_counts[index] == [0]):
+                self.correct_col_groups[index] = [0]
             else:
-                # for group in range (actual_len):
-                #     percentage += self.actual_col_counts[index][group] / self.col_counts[index][group]
-                # self.correct_col_groups_pct[index] = percentage / expected_len
-                difference = - difference 
-                #print(difference)
-                for d in range(0, difference):
-                    percentage = 0
-                    for group in range (actual_len):
-                        percentage += self.actual_col_counts[index][group] / self.col_counts[index][group + d]
-                    mean_percentage += (percentage / actual_len if actual_len !=0 else 0)
-                    #print(mean_percentage)
-                self.correct_col_groups_pct[index] = mean_percentage / (difference + 1 )
+                self.correct_col_groups[index] = [1]
+            return
         
-        # for group in range (min( actual_len, expected_len)):      
-        #     percentage += self.actual_col_counts[index][group] / self.col_counts[index][group]
-        # difference = abs(actual_len - expected_len)
-        # for i in range(difference):
-        #     percentage += 0
-        # self.correct_col_groups_pct[index] = percentage / max( actual_len, expected_len)
+        num_groups = expected_len
+
+        if (actual_len != expected_len): 
+            num_groups = min(actual_len, expected_len)
+        
+        for group in range (num_groups):      
+            if self.actual_col_counts[index][group] / self.col_counts[index][group] == 1.0:
+                percentage.append(0)
+            else:
+                percentage.append(1)
+
+        if (expected_len - actual_len > 0):
+            for _ in range(actual_len - expected_len):
+                percentage.append(1)
+
+        self.correct_col_groups[index] = percentage
 
     def random_initialization(self):
         for i in range(self.num_rows):
@@ -123,7 +152,7 @@ class Nonogram:
             self.modify_correct_row_groups(index)
         for index in range(self.num_cols):
             self.modify_group_mask(index, "col")
-            self.modify_correct_col_groups_pct(index)
+            self.modify_correct_col_groups(index)
     
     def initialize_cells_values(self):
         self.random_initialization()  
@@ -142,18 +171,18 @@ class Nonogram:
 
         for index in range(self.num_cols):
             self.modify_group_mask(index, "col")
-            self.modify_correct_col_groups_pct(index)
+            self.modify_correct_col_groups(index)
         
-        print(" Table inizialization ", self.game_table)
-        print("\n")
-        print(self.get_correct_col_groups_pct())
+        # print(" Table inizialization ", self.game_table)
+        # print("\n")
+        # print(self.get_correct_col_groups_pct())
         #print(objective_function(self))
 
     def get_correct_row_groups(self):
         return self.correct_row_groups
     
-    def get_correct_col_groups_pct(self):
-        return self.correct_col_groups_pct
+    def get_correct_col_groups(self):
+        return self.correct_col_groups
     
     def reset_groups(self, index, type):
         if type == "row":
@@ -192,6 +221,9 @@ class Nonogram:
                 else:
                     self.group_mask_col[pos][index] = group
 
+        if lengths == []:
+            lengths.append(0)
+
         self.modify_actual_counts(index, type, lengths)
     
     def modify_actual_counts(self, index, type, lengths):
@@ -199,6 +231,14 @@ class Nonogram:
             self.actual_row_counts[index] = lengths
         else:
             self.actual_col_counts[index] = lengths
+    
+    def get_difficult(self):
+        complexity = 0
+        num_groups = 0
+        for row in range(self.num_rows):
+            complexity += sum(self.row_counts[row])
+            num_groups += len(self.row_counts[row])
+        return complexity / num_groups
 
 class Memory:
     def __init__(self, max_size):
@@ -220,9 +260,8 @@ class Memory:
     def get_size(self):
         return len(self.tabu_list)
 
-    def get_an_element(self):
-        index = random.choice(np.arange(self.get_size()))
-        return self.tabu_list[index]
+    def reset_memory(self):
+        self.tabu_list = []
     
     def get_size(self):
         return len(self.tabu_list)
