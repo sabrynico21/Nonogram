@@ -18,7 +18,6 @@ def calculate_exceeding_groups(solution):
     for i in range(solution.num_cols):
         len_actual = len(solution.actual_col_counts[i])
         len_expected = len(solution.col_counts[i])
-        #if len_actual != len_expected:
         exceeding_penalty += abs(len_expected - len_actual)
 
     return exceeding_penalty
@@ -28,18 +27,13 @@ def calculate_exceeding_len(solution):
     for i in range(solution.num_cols):
         expected_col_sum = sum (count for count in solution.col_counts[i])
         actual_col_sum = solution.get_value_cells(i,"col").count(1)
-        #if actual_col_sum != expected_col_sum:
         exceeding_penalty += abs(actual_col_sum - expected_col_sum)
     return exceeding_penalty
 
 def calculate_completeness(solution):
     [solution.modify_group_mask(index, "col") for index in range(solution.num_cols)]
     [solution.modify_correct_col_groups(index) for index in range(solution.num_cols)]
-    #completeness = solution.get_correct_col_groups_pct().count(1.0) / solution.num_cols
     violated = [sum(elements) for elements in solution.get_correct_col_groups()]
-    #print(violated)
-    #completeness = sum(normalize_array(solution.get_correct_col_groups_pct())) / solution.num_cols
-    #return 1 - completeness
     return sum(violated)
 
 def objective_function(solution, completeness_weight=0.20, groups_penalty_weight=0.4, len_penalty_weight= 0.4):
@@ -68,7 +62,7 @@ def check_history(cache, solution, row_index, offset_value, group_indices):
                 return False
     return True 
 
-def get_admissible_range(cache, solution, group_indices, group_list, group_value, row_index, count, descrease_count):
+def get_admissible_range(cache, solution, group_indices, group_list, group_value, row_index):
     first_group_index = group_indices[0]    
     last_group_index = group_indices[-1]
     last_pred_index = np.where(group_list == (group_value - 1))[0]
@@ -85,7 +79,6 @@ def get_admissible_range(cache, solution, group_indices, group_list, group_value
             distance = last_pred_index[-1] - first_group_index
             min_value = max( min_value, distance + 2 )
         range = np.arange(min_value,max_value)
-        #range = range[range != 0]
         range = range[~np.isin(range, [0, 1, -1])]
         values_to_remove = []
         for value in range:
@@ -116,7 +109,7 @@ def get_admissible_range(cache, solution, group_indices, group_list, group_value
 
     return adm_range
 
-def neighb(cache, solution, indices, count, descrease_count):
+def neighb(cache, solution, indices):
     neighbors = []
     for row_index in indices:
         group_list = solution.group_mask_row[row_index]
@@ -124,13 +117,13 @@ def neighb(cache, solution, indices, count, descrease_count):
         for group_value in unique_groups:
             offset_values = [] 
             group_indices = np.where(group_list == group_value)[0]
-            offset_values = get_admissible_range(cache, solution.__copy__(), group_indices, group_list, group_value, row_index, count, descrease_count)
+            offset_values = get_admissible_range(cache, solution.__copy__(), group_indices, group_list, group_value, row_index)
             if len(offset_values) == 0:
                 continue
             
             for offset in offset_values:
                 neig = solution.__copy__()
-            #offset =random.choice(offset_values)
+            
                 for group_index in group_indices:
                     neig.set_value(row_index, group_index, 0)
 
@@ -151,29 +144,23 @@ def neighb(cache, solution, indices, count, descrease_count):
 def tabu_search(solution):
     solution.initialize_cells_values()
     current_min = objective_function(solution)
-    #print(current_min)
     indices = np.array(solution.get_correct_row_groups())
-    indices = np.where(indices != 2)[0] # ectract the index of rows in wich the groups don't are located correctly
+    indices = np.where(indices != 2)[0] # ectract the indices of rows in wich the groups don't are located correctly
     count = 0
-    descrease_count = 0
     cache = Memory(solution.correct_row_groups.count(1) * 3)
-    #cache = Memory(60)
     while (current_min != 0 and count < 1000):
         count+= 1
-        #if current_min < 1:
-        #    cache.clear_memory()
-        neighbors = neighb(cache, solution.__copy__(), indices, count, descrease_count)
+        neighbors = neighb(cache, solution.__copy__(), indices)
         if (len(neighbors)== 0):
             cache.clear_memory()
             continue
         objective_function_values = [element[1] for element in neighbors]
         min_value = min(objective_function_values)
         min_index = objective_function_values.index(min_value)
-        #if (min_value < current_min or (count - descrease_count) > 1):
+        
         solution = neighbors[min_index][0]
         current_min = min_value
         #print(" current min value ", current_min)
-            #descrease_count = count
         #print(count)
     # print(" last iteration: ", count)
     # print("\n")
@@ -188,6 +175,5 @@ def tabu_search(solution):
     # print("\n")
     # print(" Percent of correct column group: ")
     # print(solution.get_correct_col_groups_pct())
-
-    return current_min
+    return solution, current_min
     
