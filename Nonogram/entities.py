@@ -60,7 +60,6 @@ class Nonogram:
             return [row[index] for row in self.game_table]
         
     def modify_correct_row_groups(self, index): 
-        #self.modify_group_mask(index,"row") 
         if self.row_counts[index] == self.actual_row_counts[index]:
             if sum(element for element in self.actual_row_counts[index]) + (len (self.actual_row_counts[index]) - 1) == self.num_rows:
                 self.correct_row_groups[index] = 2 
@@ -68,49 +67,8 @@ class Nonogram:
                 self.correct_row_groups[index] = 1
         else:
             self.correct_row_groups[index] = 0
-
-    # def modify_correct_col_groups_pct(self, index): #contare quante violazioni ci sono nei gruppi
-    #     percentage = []
-    #     #self.modify_group_mask(index,"col")  
-    #     actual_len = len(self.actual_col_counts[index])
-    #     expected_len = len(self.col_counts[index])
-
-    #     if ( self.col_counts[index] == [0]):
-    #         if (self.actual_col_counts[index] == [0]):
-    #             self.correct_col_groups_pct[index] = 1.0
-    #         else:
-    #             self.correct_col_groups_pct[index] = 0.0
-    #         return
-
-    #     if (actual_len == expected_len): 
-    #         for group in range (actual_len):      
-    #             percentage.append(self.actual_col_counts[index][group] / self.col_counts[index][group])
-    #         if sum(percentage) == float(actual_len):
-    #             if percentage.count(1.0) != actual_len:
-    #                 self.correct_col_groups_pct[index] = 0
-    #                 return
-    #         self.correct_col_groups_pct[index] = sum(percentage) / actual_len 
-    #     else:
-    #         self.correct_col_groups_pct[index] = 0
-            # difference = actual_len - expected_len
-            # mean_percentage = 0
-            # if difference > 0: 
-            #     for d in range(0, difference):
-            #         percentage = 0
-            #         for group in range (expected_len):
-            #             percentage += self.actual_col_counts[index][group + d] / self.col_counts[index][group]
-            #         mean_percentage += percentage / expected_len
-            #     self.correct_col_groups_pct[index] = mean_percentage / (difference + 1 )
-            # else:
-            #     difference = - difference 
-            #     for d in range(0, difference):
-            #         percentage = 0
-            #         for group in range (actual_len):
-            #             percentage += self.actual_col_counts[index][group] / self.col_counts[index][group + d]
-            #         mean_percentage += (percentage / actual_len if actual_len !=0 else 0)
-            #     self.correct_col_groups_pct[index] = mean_percentage / (difference + 1 )
     
-    def modify_correct_col_groups(self, index): #contare quante violazioni ci sono nei gruppi
+    def modify_correct_col_groups(self, index): 
         percentage = [] 
         actual_len = len(self.actual_col_counts[index])
         expected_len = len(self.col_counts[index])
@@ -233,12 +191,19 @@ class Nonogram:
             self.actual_col_counts[index] = lengths
     
     def get_difficult(self):
-        complexity = 0
-        num_groups = 0
+        row_complexity = 0
+        row_num_groups = 0
         for row in range(self.num_rows):
-            complexity += sum(self.row_counts[row])
-            num_groups += len(self.row_counts[row])
-        return complexity / num_groups
+            row_complexity += sum(self.row_counts[row])
+            row_num_groups += len(self.row_counts[row])
+        
+        col_complexity = 0
+        col_num_groups = 0
+        for col in range(self.num_cols):
+            col_complexity += sum(self.col_counts[col])
+            col_num_groups += len(self.col_counts[col])
+        
+        return 0.5 * (row_complexity / row_num_groups) + 0.5 * (col_complexity / col_num_groups)
 
 class Memory:
     def __init__(self, max_size):
@@ -254,8 +219,7 @@ class Memory:
         return self.tabu_list
 
     def clear_memory(self):
-        self.tabu_list = self.tabu_list[ math.ceil(self.get_size() / 2)  : ] #int(self.get_size() / 2) + 1
-        #self.memory = []
+        self.tabu_list = self.tabu_list[ math.ceil(self.get_size() / 2)  : ] 
 
     def get_size(self):
         return len(self.tabu_list)

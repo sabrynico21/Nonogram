@@ -35,58 +35,40 @@ if __name__ == "__main__":
             matrix.set_cols_counts(second_row)
             #print("expected row counts " ,matrix.row_counts)
             #print("expected col counts " ,matrix.col_counts)
+            
             loss = tabu_search(matrix)
-            #print(loss)
             count -= 1
-            loss_values.append(loss)
-           
-        # print(file)
-        #print(matrix.get_difficult())
-        #
+            loss_values.append(loss)  
+        
         difficult.append(matrix.get_difficult())
         loss_values.sort()
         picross_loss_values.append(loss_values)
         print(loss_values)
-        
-    q2 = np.percentile(np.array(difficult), 50)
-    #print(difficult)
-    difficult.sort(reverse=True)
-    first_group_indices = np.where(difficult <= q2)[0]
-    second_group_indices = np.where(difficult > q2)[0]
+         
+    q2 = np.percentile(np.array(sorted(difficult,reverse=True)), 50)
     
+    first_group_indices = np.where(difficult > q2)[0]
+    #print(first_group_indices)
+    second_group_indices = np.where(difficult <= q2)[0]
+    values = []
+    cumulative_counts = []
     for indices in [first_group_indices,second_group_indices]:
         group_loss = np.array([picross_loss_values[idx] for idx in indices])
         loss_mean = np.mean(group_loss, axis=0)
 
         unique_values, counts = np.unique(loss_mean, return_counts=True)
-        cumulative_counts = np.cumsum(counts)
+        values.append(unique_values)
+        cumulative_counts.append(np.cumsum(counts))
 
-        plt.figure(figsize=(8, 6))
-        plt.plot(unique_values, cumulative_counts, marker='o', linestyle='-')
+    plt.figure(figsize=(8, 6))
+    
+    plt.plot(values[0], cumulative_counts[0], marker='o', linestyle='-', label='Level 1')
+    plt.plot(values[1], cumulative_counts[1], marker='s', linestyle='--', label='Level 2')
 
-        plt.xlabel('Loss values')
-        plt.ylabel('Count')
-        plt.title('Occurrences of Loss values')
-
-        plt.grid(True)
-        #name = args.file.split(".")[0]
-        plt.savefig(f'./Nonogram/Images/first.png')
-        plt.show()
-
-    # loss_values.sort()
-    # unique_values, counts = np.unique(loss_values, return_counts=True)
-    # cumulative_counts = np.cumsum(counts)
-
-    # # Plot the data
-    # plt.figure(figsize=(8, 6))
-    # plt.plot(unique_values, cumulative_counts, marker='o', linestyle='-')
-
-    # plt.xlabel('Loss values')
-    # plt.ylabel('Count')
-    # plt.title('Occurrences of Loss values')
-
-    # # Optionally, you can add a grid
-    # plt.grid(True)
-    # name = args.file.split(".")[0]
-    # plt.savefig(f'./Nonogram/Images/{name}.png')
-    # plt.show()
+    plt.xlabel('Loss values')
+    plt.ylabel('Count')
+    plt.title('Occurrences of Loss values')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig('./Nonogram/Images/test_15.png')
+    plt.show()
