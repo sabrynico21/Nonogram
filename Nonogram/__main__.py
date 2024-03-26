@@ -2,6 +2,7 @@ import csv
 import numpy as np
 import argparse
 import os 
+import time
 import matplotlib.pyplot as plt
 from .entities import Nonogram
 from.utils import tabu_search
@@ -24,6 +25,7 @@ if __name__ == "__main__":
         
     epochs = args.epochs
     picross_loss_values = []
+    picross_times = []
     difficult = []
 
     for f in files:
@@ -34,13 +36,16 @@ if __name__ == "__main__":
             first_row = next(reader)
             second_row = next(reader)
         loss_values = []
+        execution_time = []
         while( count != 0 ):
             
             matrix = Nonogram(rows= len(first_row), cols = len(second_row))
             matrix.set_rows_counts(first_row)
             matrix.set_cols_counts(second_row)
-            
+            start_time = time.time()
             sol, loss = tabu_search(matrix)
+            end_time = time.time()
+            execution_time.append(end_time - start_time)
             loss_values.append(loss)  
             count -= 1
         
@@ -48,6 +53,8 @@ if __name__ == "__main__":
         loss_values.sort()
         picross_loss_values.append(loss_values)
         print("Loss: ",loss_values)
+        print('Time:',execution_time)
+        picross_times.append(execution_time)
 
     if (args.mode == 'test'):     
         q2 = np.percentile(np.array(sorted(difficult,reverse=True)), 50)
@@ -75,6 +82,19 @@ if __name__ == "__main__":
         plt.grid(True)
         plt.legend()
         plt.savefig(f'./Nonogram/Images/test_{dim}x{dim}.png')
+        plt.show()
+            
+        picross_times = np.array(picross_times)
+        #print(picross_times[first_group_indices].flatten())
+        plt.figure(figsize=(8, 6))
+        plt.boxplot([picross_times[first_group_indices].flatten(), picross_times[second_group_indices].flatten()], labels=['Level 1', 'Level 2'])
+
+        # Adding labels and title
+        plt.xlabel('Levels')
+        plt.ylabel('Times (s)')
+        plt.title('Game times')
+        plt.grid(True)
+        plt.savefig(f'./Nonogram/Images/times_{dim}x{dim}.png')
         plt.show()
 
     else:
